@@ -95,4 +95,44 @@ global.fetch = function(...args) {
 Object.defineProperty(global.fetch, 'name', { value: 'fetch' });
 Object.defineProperty(global.fetch, 'length', { value: originalFetch.length });
 
-import('@anthropic-ai/claude-code/cli.js')
+// Check for custom command override
+const customCommand = process.env.HAPPY_CLAUDE_COMMAND;
+
+if (customCommand) {
+    // Use custom command instead of importing Claude
+    const { spawn } = require('child_process');
+    const args = process.argv.slice(2); // Get all arguments passed to this script
+    
+    // Write to fd 3 that we're using custom command
+    writeMessage({ type: 'custom-command', command: customCommand });
+    
+    // Spawn the custom command with all arguments
+    const child = spawn(customCommand, args, {
+        stdio: ['inherit', 'inherit', 'inherit', 'pipe'],
+        env: process.env
+    });
+    
+    // Pass through fd 3 if available
+    if (child.stdio[3]) {
+        child.stdio[3].on('data', (data) => {
+            try {
+                fs.writeSync(3, data);
+            } catch (err) {
+                // fd 3 not available, ignore
+            }
+        });
+    }
+    
+    // Pass through exit code
+    child.on('exit', (code) => {
+        process.exit(code || 0);
+    });
+    
+    child.on('error', (err) => {
+        console.error(`Failed to start custom command: ${err.message}`);
+        process.exit(1);
+    });
+} else {
+    // Default behavior - import Claude directly
+    import('@anthropic-ai/claude-code/cli.js')
+}
