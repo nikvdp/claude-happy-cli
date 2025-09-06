@@ -97,22 +97,41 @@ export async function claudeLocal(opts: {
                 args.push(...opts.claudeArgs)
             }
 
-            if (!claudeCliPath || !existsSync(claudeCliPath)) {
-                throw new Error('Claude local launcher not found. Please ensure HAPPY_PROJECT_ROOT is set correctly for development.');
+            // Check for custom command override
+            const customCommand = process.env.HAPPY_CLAUDE_COMMAND;
+            
+            let child;
+            if (customCommand) {
+                // Use custom command shim
+                logger.info(`Using custom Claude command: ${customCommand}`);
+                child = spawn(customCommand, args, {
+                    stdio: ['inherit', 'inherit', 'inherit', 'pipe'],
+                    signal: opts.abort,
+                    cwd: opts.path,
+                    env: {
+                        ...process.env,
+                        ...opts.claudeEnvVars
+                    },
+                });
+            } else {
+                // Use default Claude launcher
+                if (!claudeCliPath || !existsSync(claudeCliPath)) {
+                    throw new Error('Claude local launcher not found. Please ensure HAPPY_PROJECT_ROOT is set correctly for development.');
+                }
+                
+                // Prepare environment variables
+                const env = {
+                    ...process.env,
+                    ...opts.claudeEnvVars
+                }
+                
+                child = spawn('node', [claudeCliPath, ...args], {
+                    stdio: ['inherit', 'inherit', 'inherit', 'pipe'],
+                    signal: opts.abort,
+                    cwd: opts.path,
+                    env,
+                });
             }
-
-            // Prepare environment variables
-            const env = {
-                ...process.env,
-                ...opts.claudeEnvVars
-            }
-
-            const child = spawn('node', [claudeCliPath, ...args], {
-                stdio: ['inherit', 'inherit', 'inherit', 'pipe'],
-                signal: opts.abort,
-                cwd: opts.path,
-                env,
-            });
 
             // Listen to the custom fd (fd 3) line by line
             if (child.stdio[3]) {

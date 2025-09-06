@@ -30,6 +30,12 @@ This will:
 - `--claude-env KEY=VALUE` - Set environment variable for Claude Code
 - `--claude-arg ARG` - Pass additional argument to Claude CLI
 
+## Environment Variables
+
+- `HAPPY_CLAUDE_COMMAND` - Override the default Claude command with a custom command or shim
+  - Example: `HAPPY_CLAUDE_COMMAND=/path/to/your/claude-shim happy`
+  - The custom command will receive all the same arguments that would normally be passed to Claude
+
 ## Requirements
 
 - Node.js >= 20.0.0
